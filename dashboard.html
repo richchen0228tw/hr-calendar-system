@@ -157,6 +157,7 @@
             if (!user) return;
             renderUserInfo(user);
             await loadCategories();
+            await loadMembers();
 
             // 年月選單預設將目前年月選中
             const ySel = document.getElementById('filter-year');

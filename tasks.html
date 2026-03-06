@@ -136,6 +136,7 @@
             if (!currentUser) return;
             renderUserInfo(currentUser);
             await loadCategories();
+            await loadMembers();
             renderCatChips();
             bindFilters();
             await renderTable();

@@ -124,6 +124,7 @@
             if (!currentUser) return;
             renderUserInfo(currentUser);
             await loadCategories();
+            await loadMembers();
             renderCatNav();
             await renderCalendar();
             bindNav();
