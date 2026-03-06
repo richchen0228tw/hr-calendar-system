@@ -770,3 +770,22 @@ Object.assign(window, {
     fetchCalendarTasks,
     openTaskModal, openCategoryModal,
 });
+
+// ── RWD 側邊欄控制 ──
+document.addEventListener('DOMContentLoaded', () => {
+    const btnMenu = document.getElementById('btn-menu');
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+
+    if (btnMenu && sidebar && overlay) {
+        btnMenu.addEventListener('click', () => {
+            sidebar.classList.add('open');
+            overlay.classList.add('open');
+        });
+
+        overlay.addEventListener('click', () => {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('open');
+        });
+    }
+});
