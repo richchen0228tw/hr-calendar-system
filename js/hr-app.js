@@ -653,11 +653,11 @@ function openTaskModal(task = {}, user, onSaved) {
           <select id="f-month" class="form-control">${monthOptions}</select>
         </div>
         <div class="form-group">
-          <label class="form-label">具體日期（可選）</label>
+          <label class="form-label">開始日期 <span style="color:var(--status-overdue)">*</span></label>
           <input id="f-event-date" class="form-control" type="date" value="${task.event_date ?? ''}">
         </div>
         <div class="form-group">
-          <label class="form-label">截止日（可選）</label>
+          <label class="form-label">結束日期</label>
           <input id="f-deadline" class="form-control" type="date" value="${task.deadline ?? ''}">
         </div>
       </div>
@@ -699,14 +699,29 @@ function openTaskModal(task = {}, user, onSaved) {
     overlay.querySelector('#btn-save-task').addEventListener('click', async () => {
         const title = overlay.querySelector('#f-title').value.trim();
         if (!title) { showToast('請填寫任務名稱', 'error'); return; }
+
+        const eventDateStr = overlay.querySelector('#f-event-date').value || null;
+        if (!eventDateStr) { showToast('請填寫開始日期', 'error'); return; }
+
+        let deadlineStr = overlay.querySelector('#f-deadline').value || null;
+        if (deadlineStr && deadlineStr < eventDateStr) {
+            showToast('結束日期不可早於開始日期', 'error'); return;
+        }
+        if (!deadlineStr) {
+            const d = new Date(eventDateStr);
+            const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+            const pad = n => String(n).padStart(2, '0');
+            deadlineStr = `${lastDay.getFullYear()}-${pad(lastDay.getMonth() + 1)}-${pad(lastDay.getDate())}`;
+        }
+
         const payload = {
             title,
             category: overlay.querySelector('#f-category').value,
             status: overlay.querySelector('#f-status').value,
             year: parseInt(overlay.querySelector('#f-year').value),
             month: parseInt(overlay.querySelector('#f-month').value),
-            event_date: overlay.querySelector('#f-event-date').value || null,
-            deadline: overlay.querySelector('#f-deadline').value || null,
+            event_date: eventDateStr,
+            deadline: deadlineStr,
             notes: overlay.querySelector('#f-notes').value.trim() || null,
             is_recurring: overlay.querySelector('#f-recurring').checked,
             assignee_id: overlay.querySelector('#f-assignee').value || null,
