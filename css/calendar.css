@@ -44,12 +44,13 @@
 .calendar-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
+    grid-auto-rows: 120px;
     gap: 2px;
 }
 
 /* 日格 */
 .cal-day {
-    min-height: 110px;
+    height: 100%;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
@@ -60,6 +61,7 @@
     transition: background var(--transition);
     position: relative;
     cursor: default;
+    overflow: hidden;
 }
 
 .cal-day:hover {
@@ -110,12 +112,19 @@
     font-weight: 500;
     cursor: pointer;
     transition: filter var(--transition);
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
     border: none;
     text-align: left;
     width: 100%;
+    overflow: hidden;
+}
+
+.cal-task span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: block;
+    flex: 1;
+    min-width: 0;
 }
 
 .cal-task:hover {
