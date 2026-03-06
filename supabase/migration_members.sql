@@ -8,7 +8,7 @@ ALTER TABLE hr_tasks
 
 -- 2. 建立 members 資料表
 CREATE TABLE IF NOT EXISTS members (
-  id          UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  id          UUID PRIMARY KEY,
   name        TEXT NOT NULL,
   email       TEXT NOT NULL,
   avatar_url  TEXT,
