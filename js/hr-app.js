@@ -94,6 +94,9 @@ window.STATUSES = [
     { id: 'overdue', label: '已逾期', icon: '🔴' },
 ];
 
+// ── 成員清單（全域）──
+window.MEMBERS = [];
+
 // ── Supabase 初始化 ──
 function initSB() {
     if (window.__sb) return window.__sb;
@@ -101,7 +104,7 @@ function initSB() {
     return window.__sb;
 }
 
-// ── 認證守衛 ──
+// ── 認證守衛（自動將新用戶加入 members）──
 async function requireAuth() {
     const sb = initSB();
     const { data: { session } } = await sb.auth.getSession();
@@ -109,8 +112,73 @@ async function requireAuth() {
         window.location.href = 'login.html';
         return null;
     }
+    // 非同步確保成員存在（不阻塞頁面渲染）
+    ensureMember(session.user).catch(() => { });
     return session.user;
 }
+
+// ── 自動加入成員（Google 首次登入 / 任何登入方式）──
+async function ensureMember(user) {
+    const sb = window.__sb;
+    const { data } = await sb.from('members').select('id').eq('id', user.id).maybeSingle();
+    if (!data) {
+        const name = user.user_metadata?.full_name
+            || user.user_metadata?.name
+            || user.email?.split('@')[0]
+            || '未命名';
+        await sb.from('members').insert({
+            id: user.id,
+            name,
+            email: user.email,
+            avatar_url: user.user_metadata?.avatar_url ?? null,
+        });
+        // 更新本機快取
+        await loadMembers();
+    }
+}
+
+// ── 載入成員清單 ──
+async function loadMembers() {
+    try {
+        const { data, error } = await window.__sb
+            .from('members')
+            .select('*')
+            .eq('is_active', true)
+            .order('joined_at', { ascending: true });
+        if (error) throw error;
+        window.MEMBERS = data ?? [];
+    } catch (e) {
+        console.warn('[HR] members 資料表不存在，請執行 migration_members.sql');
+        window.MEMBERS = [];
+    }
+}
+
+// ── 手動新增成員（無 Google 帳號）──
+async function addMemberManual(name, email, department) {
+    const { error } = await window.__sb.from('members').insert({
+        id: crypto.randomUUID(),   // 無 auth user，生成虛擬 UUID
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        department: department?.trim() || null,
+    });
+    if (error) throw error;
+    await loadMembers();
+    showToast(`成員「${name}」已新增`, 'success');
+}
+
+// ── 更新成員 ──
+async function updateMember(id, patch) {
+    const { error } = await window.__sb.from('members').update(patch).eq('id', id);
+    if (error) throw error;
+    await loadMembers();
+}
+
+// ── 啟用/停用切換 ──
+async function toggleMemberActive(id, currentActive) {
+    await updateMember(id, { is_active: !currentActive });
+    showToast(currentActive ? '已停用成員' : '已啟用成員', 'success');
+}
+
 
 // ── 渲染用戶資訊 ──
 function renderUserInfo(user) {
@@ -546,6 +614,13 @@ function openTaskModal(task = {}, user, onSaved) {
     const monthOptions = Array.from({ length: 12 }, (_, i) =>
         `<option value="${i + 1}" ${(task.month ?? new Date().getMonth() + 1) === i + 1 ? 'selected' : ''}>${i + 1} 月</option>`
     ).join('');
+    const buildAssigneeOptions = () => {
+        const defId = task.assignee_id ?? user?.id ?? '';
+        const opts = MEMBERS.map(m =>
+            `<option value="${m.id}" data-name="${escHtml(m.name)}" ${m.id === defId ? 'selected' : ''}>${escHtml(m.name)} （${escHtml(m.email)}）</option>`
+        ).join('');
+        return `<option value="">— 未指派 —</option>` + opts;
+    };
 
     const html = `
     <div class="modal-header">
@@ -587,7 +662,10 @@ function openTaskModal(task = {}, user, onSaved) {
         </div>
       </div>
       <div class="form-group">
-        <label class="form-label">備註</label>
+        <label class="form-label">👤 負責人</label>
+        <select id="f-assignee" class="form-control">${buildAssigneeOptions()}</select>
+      </div>
+      <div class="form-group">
         <textarea id="f-notes" class="form-control" rows="3">${escHtml(task.notes ?? '')}</textarea>
       </div>
       <div class="form-group" style="display:flex;align-items:center;gap:8px">
@@ -631,6 +709,8 @@ function openTaskModal(task = {}, user, onSaved) {
             deadline: overlay.querySelector('#f-deadline').value || null,
             notes: overlay.querySelector('#f-notes').value.trim() || null,
             is_recurring: overlay.querySelector('#f-recurring').checked,
+            assignee_id: overlay.querySelector('#f-assignee').value || null,
+            assignee_name: overlay.querySelector('#f-assignee').selectedOptions[0]?.dataset.name || null,
         };
         try {
             if (isEdit) await updateTask(task.id, payload, user.id);
@@ -670,6 +750,7 @@ Object.assign(window, {
     formatDate, relativeTime, debounce, escHtml, isOverdue,
     fetchTasks, fetchTask, createTask, updateTask,
     updateStatus, deleteTask, fetchHistory, fetchStats,
+    loadMembers, addMemberManual, updateMember, toggleMemberActive, ensureMember,
     loadCategories, createCategory, updateCategory, deleteCategory, getCatStyle,
     fetchCalendarTasks,
     openTaskModal, openCategoryModal,

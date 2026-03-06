@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HR 行事曆 — 成員管理</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="stylesheet" href="css/main.css" />
+    <link rel="stylesheet" href="css/calendar.css" />
+</head>
+
+<body>
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <div class="logo-icon">📅</div>
+                    <div>
+                        <div class="logo-text">HR 行事曆</div>
+                        <div class="logo-sub">人力資源處</div>
+                    </div>
+                </div>
+            </div>
+            <nav class="sidebar-nav">
+                <div class="nav-section-label">主選單</div>
+                <a href="index.html" class="nav-item"><span class="nav-icon">📅</span>月曆</a>
+                <a href="dashboard.html" class="nav-item"><span class="nav-icon">📊</span>儀表板</a>
+                <a href="tasks.html" class="nav-item"><span class="nav-icon">📋</span>任務列表</a>
+                <div class="nav-section-label" style="margin-top:16px">管理</div>
+                <a href="members.html" class="nav-item active"><span class="nav-icon">👥</span>成員管理</a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar" id="user-avatar"></div>
+                    <div class="user-details">
+                        <div class="user-name" id="user-name"></div>
+                        <div class="user-email" id="user-email"></div>
+                    </div>
+                </div>
+                <button class="btn btn-ghost btn-sm" id="btn-logout" style="width:100%;margin-top:8px">登出</button>
+            </div>
+        </aside>
+
+        <!-- Main -->
+        <main class="main-content">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">👥 成員管理</h1>
+                    <p class="page-subtitle">管理使用系統的成員名單</p>
+                </div>
+                <button class="btn btn-primary" id="btn-add-member">＋ 新增成員</button>
+            </div>
+
+            <!-- 新增成員表單（隱藏） -->
+            <div id="add-member-form"
+                style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:20px">
+                <div style="font-size:15px;font-weight:700;margin-bottom:16px">新增成員</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div class="form-group" style="margin:0">
+                        <label class="form-label">姓名 *</label>
+                        <input id="new-name" class="form-control" placeholder="王小明" />
+                    </div>
+                    <div class="form-group" style="margin:0">
+                        <label class="form-label">Email *</label>
+                        <input id="new-email" class="form-control" type="email" placeholder="user@company.com" />
+                    </div>
+                    <div class="form-group" style="margin:0">
+                        <label class="form-label">部門</label>
+                        <input id="new-dept" class="form-control" placeholder="人力資源處" />
+                    </div>
+                </div>
+                <div style="display:flex;gap:8px">
+                    <button class="btn btn-primary btn-sm" id="btn-confirm-add">新增</button>
+                    <button class="btn btn-ghost btn-sm" id="btn-cancel-add">取消</button>
+                </div>
+            </div>
+
+            <!-- 成員表格 -->
+            <div class="card">
+                <div class="tasks-table-wrap">
+                    <table class="tasks-table" id="members-table">
+                        <thead>
+                            <tr>
+                                <th>成員</th>
+                                <th>Email</th>
+                                <th>部門</th>
+                                <th>角色</th>
+                                <th>加入日期</th>
+                                <th>狀態</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="members-tbody">
+                            <tr>
+                                <td colspan="7" style="text-align:center;padding:40px">
+                                    <div class="spinner" style="margin:0 auto"></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <script src="js/hr-app.js"></script>
+    <script>
+        let currentUser = null;
+
+        (async () => {
+            initSB();
+            currentUser = await requireAuth();
+            if (!currentUser) return;
+            renderUserInfo(currentUser);
+            await loadMembers();
+            renderTable();
+        })();
+
+        function avatarHtml(m) {
+            if (m.avatar_url) {
+                return `<img src="${escHtml(m.avatar_url)}" style="width:32px;height:32px;border-radius:50%;object-fit:cover" onerror="this.style.display='none'">`;
+            }
+            const initials = m.name.slice(0, 2).toUpperCase();
+            const colors = ['#6366f1', '#f472b6', '#34d399', '#f59e0b', '#3b82f6'];
+            const bg = colors[m.name.charCodeAt(0) % colors.length];
+            return `<div style="width:32px;height:32px;border-radius:50%;background:${bg};color:white;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">${initials}</div>`;
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('members-tbody');
+            const all = [...MEMBERS];
+
+            // 也顯示停用成員（重新從 DB 全查）
+            window.__sb.from('members').select('*').order('joined_at').then(({ data }) => {
+                const rows = (data ?? []).map(m => `
+          <tr>
+            <td>
+              <div style="display:flex;align-items:center;gap:10px">
+                ${avatarHtml(m)}
+                <span style="font-weight:500">${escHtml(m.name)}</span>
+              </div>
+            </td>
+            <td style="color:var(--text-secondary)">${escHtml(m.email)}</td>
+            <td>${escHtml(m.department ?? '—')}</td>
+            <td>
+              <select class="status-select role-sel" data-id="${m.id}" style="min-width:80px">
+                <option value="member" ${m.role === 'member' ? 'selected' : ''}>成員</option>
+                <option value="admin" ${m.role === 'admin' ? 'selected' : ''}>管理員</option>
+              </select>
+            </td>
+            <td style="color:var(--text-muted);font-size:12px">${m.joined_at ? new Date(m.joined_at).toLocaleDateString('zh-TW') : '—'}</td>
+            <td>
+              <span style="padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;
+                background:${m.is_active ? 'rgba(52,211,153,.15)' : 'rgba(148,163,184,.15)'};
+                color:${m.is_active ? '#059669' : '#94a3b8'}">
+                ${m.is_active ? '啟用' : '停用'}
+              </span>
+            </td>
+            <td>
+              <button class="btn btn-ghost btn-sm btn-toggle" data-id="${m.id}" data-active="${m.is_active}">
+                ${m.is_active ? '停用' : '啟用'}
+              </button>
+            </td>
+          </tr>`).join('');
+                tbody.innerHTML = rows || '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-muted)">尚無成員</td></tr>';
+                bindEvents();
+            });
+        }
+
+        function bindEvents() {
+            // 角色變更
+            document.querySelectorAll('.role-sel').forEach(sel => {
+                sel.addEventListener('change', async () => {
+                    try {
+                        await updateMember(sel.dataset.id, { role: sel.value });
+                    } catch (e) { showToast('更新失敗', 'error'); }
+                });
+            });
+            // 啟用/停用
+            document.querySelectorAll('.btn-toggle').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    try {
+                        await toggleMemberActive(btn.dataset.id, btn.dataset.active === 'true');
+                        renderTable();
+                    } catch (e) { showToast('操作失敗：' + e.message, 'error'); }
+                });
+            });
+        }
+
+        // 新增成員按鈕
+        document.getElementById('btn-add-member').addEventListener('click', () => {
+            document.getElementById('add-member-form').style.display = 'block';
+        });
+        document.getElementById('btn-cancel-add').addEventListener('click', () => {
+            document.getElementById('add-member-form').style.display = 'none';
+        });
+        document.getElementById('btn-confirm-add').addEventListener('click', async () => {
+            const name = document.getElementById('new-name').value.trim();
+            const email = document.getElementById('new-email').value.trim();
+            const dept = document.getElementById('new-dept').value.trim();
+            if (!name || !email) { showToast('請填寫姓名和 Email', 'error'); return; }
+            try {
+                await addMemberManual(name, email, dept);
+                document.getElementById('add-member-form').style.display = 'none';
+                document.getElementById('new-name').value = '';
+                document.getElementById('new-email').value = '';
+                document.getElementById('new-dept').value = '';
+                renderTable();
+            } catch (e) { showToast('新增失敗：' + e.message, 'error'); }
+        });
+    </script>
+</body>
+
+</html>
