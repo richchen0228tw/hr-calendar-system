@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="stylesheet" href="css/main.css" />
     <link rel="stylesheet" href="css/calendar.css" />
+    <link rel="icon" href="logo2.png" />
 </head>
 
 <body>
@@ -15,7 +16,8 @@
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-logo">
-                <div class="logo-icon">📅</div>
+                <img src="logo2.png" alt="Logo" class="logo-icon"
+                    style="background:transparent; padding:0; object-fit:contain;">
                 <div>
                     <div class="logo-text">HR 行事曆</div>
                     <div class="logo-sub">人力資源處</div>
@@ -43,6 +45,7 @@
 
         <!-- Main -->
         <header class="main-header">
+            <button id="btn-menu" class="btn-menu">☰</button>
             <div class="header-title">
                 <h1>👥 成員管理</h1>
                 <p class="page-subtitle">管理使用系統的成員名單</p>
@@ -220,6 +223,7 @@
             } catch (e) { showToast('新增失敗：' + e.message, 'error'); }
         });
     </script>
+    <div id="sidebar-overlay" class="sidebar-overlay"></div>
 </body>
 
 </html>
