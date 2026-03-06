@@ -11,16 +11,14 @@
 </head>
 
 <body>
-    <div class="app-layout">
+    <div class="app-shell">
         <!-- Sidebar -->
         <aside class="sidebar">
-            <div class="sidebar-header">
-                <div class="logo">
-                    <div class="logo-icon">📅</div>
-                    <div>
-                        <div class="logo-text">HR 行事曆</div>
-                        <div class="logo-sub">人力資源處</div>
-                    </div>
+            <div class="sidebar-logo">
+                <div class="logo-icon">📅</div>
+                <div>
+                    <div class="logo-text">HR 行事曆</div>
+                    <div class="logo-sub">人力資源處</div>
                 </div>
             </div>
             <nav class="sidebar-nav">
@@ -32,26 +30,28 @@
                 <a href="members.html" class="nav-item active"><span class="nav-icon">👥</span>成員管理</a>
             </nav>
             <div class="sidebar-footer">
-                <div class="user-info">
-                    <div class="user-avatar" id="user-avatar"></div>
-                    <div class="user-details">
-                        <div class="user-name" id="user-name"></div>
+                <div class="user-card">
+                    <div class="user-avatar" id="user-avatar">HR</div>
+                    <div>
+                        <div class="user-name" id="user-name">載入中...</div>
                         <div class="user-email" id="user-email"></div>
                     </div>
                 </div>
-                <button class="btn btn-ghost btn-sm" id="btn-logout" style="width:100%;margin-top:8px">登出</button>
+                <button class="btn btn-ghost btn-sm" id="btn-logout" style="width:100%;margin-top:4px">登出</button>
             </div>
         </aside>
 
         <!-- Main -->
-        <main class="main-content">
-            <div class="page-header">
-                <div>
-                    <h1 class="page-title">👥 成員管理</h1>
-                    <p class="page-subtitle">管理使用系統的成員名單</p>
-                </div>
+        <header class="main-header">
+            <div class="header-title">
+                <h1>👥 成員管理</h1>
+                <p class="page-subtitle">管理使用系統的成員名單</p>
+            </div>
+            <div class="header-actions">
                 <button class="btn btn-primary" id="btn-add-member">＋ 新增成員</button>
             </div>
+        </header>
+        <main class="main-content">
 
             <!-- 新增成員表單（隱藏） -->
             <div id="add-member-form"
@@ -131,11 +131,12 @@
 
         function renderTable() {
             const tbody = document.getElementById('members-tbody');
-            const all = [...MEMBERS];
 
-            // 也顯示停用成員（重新從 DB 全查）
-            window.__sb.from('members').select('*').order('joined_at').then(({ data }) => {
-                const rows = (data ?? []).map(m => `
+            // 由於 members 可能還沒建立，加上 try-catch 防呆
+            window.__sb.from('members').select('*').order('joined_at')
+                .then(({ data, error }) => {
+                    if (error) throw error;
+                    const rows = (data ?? []).map(m => `
           <tr>
             <td>
               <div style="display:flex;align-items:center;gap:10px">
@@ -165,9 +166,16 @@
               </button>
             </td>
           </tr>`).join('');
-                tbody.innerHTML = rows || '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-muted)">尚無成員</td></tr>';
-                bindEvents();
-            });
+                    tbody.innerHTML = rows || '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-muted)">尚無成員</td></tr>';
+                    bindEvents();
+                })
+                .catch(err => {
+                    console.error('載入成員失敗:', err);
+                    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--status-overdue)">
+                    ⚠️ 無法讀取成員資料庫。<br><br>
+                    請確認 Supabase 中是否已執行 <b>migration_members.sql</b>。
+                  </td></tr>`;
+                });
         }
 
         function bindEvents() {
