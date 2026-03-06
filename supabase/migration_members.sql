@@ -3,7 +3,7 @@
 
 -- 1. 在 hr_tasks 加負責人欄位
 ALTER TABLE hr_tasks
-  ADD COLUMN IF NOT EXISTS assignee_id   UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS assignee_id   UUID,
   ADD COLUMN IF NOT EXISTS assignee_name TEXT;
 
 -- 2. 建立 members 資料表
