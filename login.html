@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="zh-Hant">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HR 行事曆系統 — 登入</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="css/main.css" />
+  <style>
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4c1d95 100%);
+    }
+
+    .login-card {
+      width: 400px;
+      background: white;
+      border-radius: 24px;
+      padding: 40px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
+      animation: scaleIn 0.3s ease;
+    }
+
+    .login-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+
+    .login-icon {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+    }
+
+    .login-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: #0f172a;
+      line-height: 1.2;
+    }
+
+    .login-sub {
+      font-size: 13px;
+      color: #64748b;
+      margin-top: 2px;
+    }
+
+    .login-form h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 4px;
+    }
+
+    .login-form p {
+      font-size: 13px;
+      color: #64748b;
+      margin-bottom: 20px;
+    }
+
+    /* Google 按鈕 */
+    .btn-google {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      font-family: inherit;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      background: white;
+      color: #1e293b;
+      cursor: pointer;
+      transition: all .15s;
+      margin-bottom: 16px;
+    }
+
+    .btn-google:hover {
+      background: #f8fafc;
+      border-color: #cbd5e1;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .08);
+    }
+
+    .btn-google:disabled {
+      opacity: .6;
+      cursor: not-allowed;
+    }
+
+    /* 分隔線 */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 16px 0;
+      color: #94a3b8;
+      font-size: 12px;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #e2e8f0;
+    }
+
+    #btn-login {
+      width: 100%;
+      padding: 12px;
+      font-size: 15px;
+    }
+
+    .login-error {
+      background: #fee2e2;
+      color: #991b1b;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 13px;
+      margin-top: 12px;
+      display: none;
+    }
+
+    .login-error.show {
+      display: block;
+    }
+
+    @keyframes scaleIn {
+      from {
+        transform: scale(0.96);
+        opacity: 0;
+      }
+
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-icon">📅</div>
+      <div>
+        <div class="login-title">HR 行事曆</div>
+        <div class="login-sub">人力資源處 2026 年度</div>
+      </div>
+    </div>
+    <div class="login-form">
+      <h2>歡迎回來 👋</h2>
+      <p>請登入以繼續使用系統</p>
+
+      <!-- Google OAuth 登入 -->
+      <button id="btn-google" class="btn-google">
+        <svg width="20" height="20" viewBox="0 0 48 48" fill="none">
+          <path fill="#FFC107"
+            d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C12.955 4 4 12.955 4 24s8.955 20 20 20s20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z" />
+          <path fill="#FF3D00"
+            d="m6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C16.318 4 9.656 8.337 6.306 14.691z" />
+          <path fill="#4CAF50"
+            d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0 1 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z" />
+          <path fill="#1976D2"
+            d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002l6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z" />
+        </svg>
+        使用 Google 帳號登入
+      </button>
+
+      <div class="divider">或使用帳號密碼</div>
+
+      <div class="form-group">
+        <label class="form-label" for="email">電子郵件</label>
+        <input id="email" class="form-control" type="email" placeholder="your@company.com" autocomplete="email" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="password">密碼</label>
+        <input id="password" class="form-control" type="password" placeholder="••••••••"
+          autocomplete="current-password" />
+      </div>
+      <button id="btn-login" class="btn btn-primary">
+        <span id="btn-text">登入</span>
+        <span id="btn-spinner" class="spinner"
+          style="display:none;width:16px;height:16px;border-width:2px;border-color:rgba(255,255,255,.3);border-top-color:white"></span>
+      </button>
+      <div id="login-error" class="login-error"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script>
+    const SUPABASE_URL = 'https://ntfngxvgguokercllzza.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50Zm5neHZnZ3Vva2VyY2xsenphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2OTk5MTQsImV4cCI6MjA4ODI3NTkxNH0.wAXYy_g7mmoIsofbwI8T-Fhl2KiKr-bGm-MxzHuEC7Q';
+
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    window.__sb = sb;
+    window.__SUPABASE_URL = SUPABASE_URL;
+    window.__SUPABASE_ANON_KEY = SUPABASE_ANON_KEY;
+
+    // 若已登入直接跳轉
+    sb.auth.getSession().then(({ data: { session } }) => {
+      if (session) window.location.href = 'index.html';
+    });
+
+    // ── Google OAuth ──
+    document.getElementById('btn-google').addEventListener('click', async () => {
+      const btn = document.getElementById('btn-google');
+      btn.disabled = true;
+      btn.textContent = '🔄 跳轉中...';
+
+      // redirectTo：本機用 localhost，Netlify 會自動用正確 origin
+      const base = window.location.href.replace('login.html', '');
+      const { error } = await sb.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: base + 'index.html' },
+      });
+      if (error) {
+        document.getElementById('login-error').textContent = 'Google 登入失敗：' + error.message;
+        document.getElementById('login-error').classList.add('show');
+        btn.disabled = false;
+        btn.textContent = '使用 Google 帳號登入';
+      }
+    });
+
+    // ── Email 登入 ──
+    async function doEmailLogin() {
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const errEl = document.getElementById('login-error');
+      const btnText = document.getElementById('btn-text');
+      const spinner = document.getElementById('btn-spinner');
+
+      if (!email || !password) {
+        errEl.textContent = '請填寫電子郵件和密碼';
+        errEl.classList.add('show');
+        return;
+      }
+      btnText.textContent = '登入中...';
+      spinner.style.display = 'inline-block';
+      errEl.classList.remove('show');
+
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) {
+        errEl.textContent = error.message === 'Invalid login credentials' ? '電子郵件或密碼錯誤' : error.message;
+        errEl.classList.add('show');
+        btnText.textContent = '登入';
+        spinner.style.display = 'none';
+      } else {
+        window.location.href = 'index.html';
+      }
+    }
+
+    document.getElementById('btn-login').addEventListener('click', doEmailLogin);
+    document.getElementById('password').addEventListener('keydown', e => {
+      if (e.key === 'Enter') doEmailLogin();
+    });
+  </script>
+</body>
+
+</html>

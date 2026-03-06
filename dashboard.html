@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>儀表板 — HR 行事曆系統</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="stylesheet" href="css/main.css" />
+</head>
+
+<body>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <div class="logo-icon">📅</div>
+                <div>
+                    <div class="logo-text">HR 行事曆</div>
+                    <div class="logo-sub">人力資源處 2026</div>
+                </div>
+            </div>
+            <nav class="sidebar-nav">
+                <div class="nav-section-label">主選單</div>
+                <a href="index.html" class="nav-item"><span class="nav-icon">📅</span> 月曆</a>
+                <a href="dashboard.html" class="nav-item active"><span class="nav-icon">📊</span> 儀表板</a>
+                <a href="tasks.html" class="nav-item"><span class="nav-icon">📋</span> 任務列表</a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="user-card">
+                    <div class="user-avatar" id="user-avatar">HR</div>
+                    <div>
+                        <div class="user-name" id="user-name">載入中...</div>
+                        <div class="user-email" id="user-email"></div>
+                    </div>
+                </div>
+                <button class="btn btn-ghost btn-sm" id="btn-logout" style="width:100%;margin-top:4px">登出</button>
+            </div>
+        </aside>
+
+        <header class="main-header">
+            <div class="header-title">
+                <h1>📊 儀表板</h1>
+                <p id="dash-subtitle">本月任務概覽</p>
+            </div>
+            <div class="header-actions" style="gap:8px">
+                <select id="filter-year" class="form-control" style="width:90px">
+                    <option value="2025">2025</option>
+                    <option value="2026" selected>2026</option>
+                    <option value="2027">2027</option>
+                </select>
+                <select id="filter-month" class="form-control" style="width:80px">
+                    <option value="">全年</option>
+                    <option value="1">1月</option>
+                    <option value="2">2月</option>
+                    <option value="3">3月</option>
+                    <option value="4">4月</option>
+                    <option value="5">5月</option>
+                    <option value="6">6月</option>
+                    <option value="7">7月</option>
+                    <option value="8">8月</option>
+                    <option value="9">9月</option>
+                    <option value="10">10月</option>
+                    <option value="11">11月</option>
+                    <option value="12">12月</option>
+                </select>
+                <button id="btn-reload" class="btn btn-primary btn-sm">🔄 更新</button>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <!-- 統計 -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:#eef2ff">📋</div>
+                    <div class="stat-value" id="stat-total">—</div>
+                    <div class="stat-label" id="stat-label-total">本月總任務</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:#dcfce7">✅</div>
+                    <div class="stat-value" id="stat-done">—</div>
+                    <div class="stat-label">已完成</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:#fef3c7">🔄</div>
+                    <div class="stat-value" id="stat-in-progress">—</div>
+                    <div class="stat-label">進行中</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:#fee2e2">⚠️</div>
+                    <div class="stat-value" id="stat-overdue" style="color:var(--status-overdue)">—</div>
+                    <div class="stat-label">已逾期</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:#f0fdf4">📈</div>
+                    <div class="stat-value" id="stat-rate">—</div>
+                    <div class="stat-label">完成率</div>
+                </div>
+            </div>
+
+            <!-- 圖表 -->
+            <div style="display:grid;grid-template-columns:1fr 300px;gap:16px;margin-bottom:16px">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title" id="chart-bar-title">各類別任務分佈</div>
+                    </div>
+                    <div class="card-body" style="height:220px"><canvas id="chart-bar"></canvas></div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title" id="chart-pie-title">完成狀態分佈</div>
+                    </div>
+                    <div class="card-body" style="height:220px"><canvas id="chart-pie"></canvas></div>
+                </div>
+            </div>
+
+            <!-- 清單 -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">🔴 逾期任務</div>
+                    </div>
+                    <div id="overdue-list">
+                        <div style="padding:24px;text-align:center">
+                            <div class="spinner" style="margin:0 auto"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">🔔 即將到期（前 5 項）</div>
+                    </div>
+                    <div id="upcoming-list">
+                        <div style="padding:24px;text-align:center">
+                            <div class="spinner" style="margin:0 auto"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <script src="js/hr-app.js"></script>
+    <script>
+        const now = new Date();
+        let selYear = now.getFullYear();
+        let selMonth = now.getMonth() + 1;  // 預設當月
+
+        let chartPie, chartBar;
+
+        (async () => {
+            initSB();
+            const user = await requireAuth();
+            if (!user) return;
+            renderUserInfo(user);
+            await loadCategories();
+
+            // 年月選單預設將目前年月選中
+            const ySel = document.getElementById('filter-year');
+            const mSel = document.getElementById('filter-month');
+            ySel.value = String(selYear);
+            mSel.value = String(selMonth);
+
+            updateSubtitle();
+            await loadDashboard();
+
+            ySel.addEventListener('change', () => { selYear = parseInt(ySel.value); updateSubtitle(); loadDashboard(); });
+            mSel.addEventListener('change', () => { selMonth = mSel.value ? parseInt(mSel.value) : null; updateSubtitle(); loadDashboard(); });
+            document.getElementById('btn-reload').addEventListener('click', loadDashboard);
+        })();
+
+        function updateSubtitle() {
+            const label = selMonth ? `${selYear} 年 ${selMonth} 月任務概覽` : `${selYear} 年度任務概覽`;
+            document.getElementById('dash-subtitle').textContent = label;
+            const chartLabel = selMonth ? `${selYear}/${selMonth}月` : `${selYear}年度`;
+            document.getElementById('chart-bar-title').textContent = `各類別任務分佈（${chartLabel}）`;
+            document.getElementById('chart-pie-title').textContent = `完成狀態分佈（${chartLabel}）`;
+            // 統計卡標籤
+            document.getElementById('stat-label-total').textContent = selMonth ? '本月總任務' : '年度總任務';
+        }
+
+        async function loadDashboard() {
+            const stats = await fetchStats(selYear, selMonth);
+
+            document.getElementById('stat-total').textContent = stats.total;
+            document.getElementById('stat-done').textContent = stats.done;
+            document.getElementById('stat-in-progress').textContent = stats.inProgress;
+            document.getElementById('stat-overdue').textContent = stats.overdue;
+            const rate = stats.total > 0 ? Math.round((stats.done / stats.total) * 100) : 0;
+            document.getElementById('stat-rate').textContent = rate + '%';
+
+            // 長條圖（動態類別顏色）
+            const barCtx = document.getElementById('chart-bar').getContext('2d');
+            if (chartBar) chartBar.destroy();
+            chartBar = new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: CATEGORIES.map(c => c.label),
+                    datasets: [{
+                        label: '任務數',
+                        data: CATEGORIES.map(c => stats.byCategory[c.id] ?? 0),
+                        backgroundColor: CATEGORIES.map(c => c.color),
+                        borderRadius: 6,
+                    }],
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: 'rgba(0,0,0,.04)' } },
+                        x: { grid: { display: false } },
+                    },
+                },
+            });
+
+            // 圓餅圖
+            const pieCtx = document.getElementById('chart-pie').getContext('2d');
+            if (chartPie) chartPie.destroy();
+            chartPie = new Chart(pieCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['已完成', '進行中', '待辦', '已逾期'],
+                    datasets: [{
+                        data: [stats.done, stats.inProgress, stats.pending, stats.overdue],
+                        backgroundColor: ['#22c55e', '#f59e0b', '#94a3b8', '#ef4444'],
+                        borderWidth: 0, hoverOffset: 4,
+                    }],
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { padding: 12, font: { size: 11 } } } },
+                    cutout: '65%',
+                },
+            });
+
+            // 途期清單
+            const tasks = await fetchTasks({ year: selYear, month: selMonth || undefined });
+            const overdue = tasks.filter(t => isOverdue(t));
+            const overdueEl = document.getElementById('overdue-list');
+            if (!overdue.length) {
+                overdueEl.innerHTML = `<div class="empty-state" style="padding:20px"><div class="empty-icon">🎉</div><p>本月沒有逾期任務！</p></div>`;
+            } else {
+                overdueEl.innerHTML = overdue.map(t => `
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border)">
+              <div style="width:6px;height:6px;border-radius:50%;background:var(--status-overdue);flex-shrink:0"></div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(t.title)}</div>
+                <div style="font-size:11px;color:var(--text-muted)">${t.category}</div>
+              </div>
+              <span class="badge badge-overdue">逾期</span>
+            </div>`).join('');
+            }
+
+            // 即將到期
+            const upcoming = tasks
+                .filter(t => t.status !== 'done' && !isOverdue(t) && (t.event_date || t.deadline))
+                .sort((a, b) => new Date(a.event_date ?? a.deadline) - new Date(b.event_date ?? b.deadline))
+                .slice(0, 5);
+            const upcomingEl = document.getElementById('upcoming-list');
+            if (!upcoming.length) {
+                upcomingEl.innerHTML = `<div class="empty-state" style="padding:20px"><p>無即將到期任務</p></div>`;
+            } else {
+                upcomingEl.innerHTML = upcoming.map(t => `
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border)">
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13px;font-weight:500">${escHtml(t.title)}</div>
+                <div style="font-size:11px;color:var(--text-muted)">${formatDate(t.event_date ?? t.deadline)}</div>
+              </div>
+              <span class="cat-badge cat-${t.category}">${t.category}</span>
+            </div>`).join('');
+            }
+        }
+    </script>
+</body>
+
+</html>

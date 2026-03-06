@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>任務列表 — HR 行事曆系統</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="stylesheet" href="css/main.css" />
+    <link rel="stylesheet" href="css/calendar.css" />
+</head>
+
+<body>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <div class="logo-icon">📅</div>
+                <div>
+                    <div class="logo-text">HR 行事曆</div>
+                    <div class="logo-sub">人力資源處 2026</div>
+                </div>
+            </div>
+            <nav class="sidebar-nav">
+                <div class="nav-section-label">主選單</div>
+                <a href="index.html" class="nav-item"><span class="nav-icon">📅</span> 月曆</a>
+                <a href="dashboard.html" class="nav-item"><span class="nav-icon">📊</span> 儀表板</a>
+                <a href="tasks.html" class="nav-item active"><span class="nav-icon">📋</span> 任務列表</a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="user-card">
+                    <div class="user-avatar" id="user-avatar">HR</div>
+                    <div>
+                        <div class="user-name" id="user-name">載入中...</div>
+                        <div class="user-email" id="user-email"></div>
+                    </div>
+                </div>
+                <button class="btn btn-ghost btn-sm" id="btn-logout" style="width:100%;margin-top:4px">登出</button>
+            </div>
+        </aside>
+
+        <header class="main-header">
+            <div class="header-title">
+                <h1>📋 任務列表</h1>
+                <p id="task-count-label">載入中...</p>
+            </div>
+            <div class="header-actions">
+                <div class="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input id="search-input" class="form-control" type="text" placeholder="搜尋任務..." />
+                </div>
+                <button id="btn-add-task" class="btn btn-primary">＋ 新增任務</button>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <!-- Filter Bar -->
+            <div class="card" style="padding:14px 16px;margin-bottom:16px">
+                <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <select id="filter-year" class="form-control" style="width:90px">
+                            <option value="">全年</option>
+                            <option value="2026" selected>2026</option>
+                            <option value="2027">2027</option>
+                        </select>
+                        <select id="filter-month" class="form-control" style="width:80px">
+                            <option value="">全月</option>
+                            <option value="1">1月</option>
+                            <option value="2">2月</option>
+                            <option value="3">3月</option>
+                            <option value="4">4月</option>
+                            <option value="5">5月</option>
+                            <option value="6">6月</option>
+                            <option value="7">7月</option>
+                            <option value="8">8月</option>
+                            <option value="9">9月</option>
+                            <option value="10">10月</option>
+                            <option value="11">11月</option>
+                            <option value="12">12月</option>
+                        </select>
+                    </div>
+                    <div style="width:1px;height:24px;background:var(--border)"></div>
+                    <div id="cat-filter-bar" class="filter-bar">
+                        <!-- JS 動態填入，loadCategories() 後 renderCatChips() -->
+                    </div>
+                    <button id="btn-manage-cat" class="btn btn-ghost btn-sm" style="flex-shrink:0">⚙️ 管理類別</button>
+                    <div style="width:1px;height:24px;background:var(--border)"></div>
+                    <div class="filter-bar">
+                        <button class="filter-chip-status active" data-status="">全部狀態</button>
+                        <button class="filter-chip-status" data-status="pending">⏳ 待辦</button>
+                        <button class="filter-chip-status" data-status="in_progress">🔄 進行中</button>
+                        <button class="filter-chip-status" data-status="done">✅ 已完成</button>
+                        <button class="filter-chip-status" data-status="overdue">🔴 逾期</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="card">
+                <div class="tasks-table-wrap">
+                    <table class="tasks-table">
+                        <thead>
+                            <tr>
+                                <th>任務名稱</th>
+                                <th>類別</th>
+                                <th>時間</th>
+                                <th>截止日</th>
+                                <th>狀態</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tasks-tbody">
+                            <tr>
+                                <td colspan="6" style="text-align:center;padding:60px">
+                                    <div class="spinner" style="margin:0 auto"></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <script src="js/hr-app.js"></script>
+    <script>
+        let filters = { year: 2026, month: '', cat: '', status: '', search: '' };
+        let currentUser = null;
+        let allTasks = [];
+
+        (async () => {
+            initSB();
+            currentUser = await requireAuth();
+            if (!currentUser) return;
+            renderUserInfo(currentUser);
+            await loadCategories();
+            renderCatChips();
+            bindFilters();
+            await renderTable();
+        })();
+
+        async function renderTable() {
+            const tbody = document.getElementById('tasks-tbody');
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:60px"><div class="spinner" style="margin:0 auto"></div></td></tr>`;
+            try {
+                allTasks = await fetchTasks({
+                    year: filters.year || undefined,
+                    month: filters.month || undefined,
+                    category: filters.cat || undefined,
+                    status: filters.status || undefined,
+                    search: filters.search || undefined,
+                });
+
+                document.getElementById('task-count-label').textContent = `共 ${allTasks.length} 筆任務`;
+
+                if (!allTasks.length) {
+                    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">📭</div><h3>沒有符合條件的任務</h3><p>試試調整篩選條件</p></div></td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = allTasks.map(t => {
+                    const eff = isOverdue(t) ? 'overdue' : t.status;
+                    const sl = { pending: '⏳ 待辦', in_progress: '🔄 進行中', done: '✅ 已完成', overdue: '🔴 逾期' };
+                    return `<tr>
+              <td class="task-title-cell">
+                ${escHtml(t.title)}
+                ${t.is_recurring ? '<small>🔄 例行</small>' : ''}
+                ${t.notes ? `<small>${escHtml(t.notes.slice(0, 40))}${t.notes.length > 40 ? '...' : ''}</small>` : ''}
+              </td>
+              <td><span class="cat-badge" style="${getCatStyle(t.category) || 'background:var(--surface-hover);color:var(--text-secondary)'}">
+                ${escHtml((CATEGORIES.find(c => c.id === t.category)?.icon) || '')} ${escHtml(t.category)}
+              </span></td>
+              <td style="font-size:12px;color:var(--text-secondary);white-space:nowrap">
+                ${t.year}/${t.month}月${t.event_date ? `<br>${formatDate(t.event_date)}` : ''}
+              </td>
+              <td style="font-size:12px;color:${eff === 'overdue' ? 'var(--status-overdue)' : 'var(--text-secondary)'}">
+                ${formatDate(t.deadline)}
+              </td>
+              <td>
+                <select class="status-select badge badge-${eff}" data-id="${t.id}">
+                  <option value="pending"     ${t.status === 'pending' ? 'selected' : ''}>⏳ 待辦</option>
+                  <option value="in_progress" ${t.status === 'in_progress' ? 'selected' : ''}>🔄 進行中</option>
+                  <option value="done"        ${t.status === 'done' ? 'selected' : ''}>✅ 已完成</option>
+                  <option value="overdue"     ${t.status === 'overdue' ? 'selected' : ''}>🔴 逾期</option>
+                </select>
+              </td>
+              <td style="white-space:nowrap">
+                <button class="btn btn-ghost btn-sm btn-edit" data-id="${t.id}" title="編輯">✏️</button>
+                <button class="btn btn-ghost btn-sm btn-del" data-id="${t.id}" title="刪除">🗑</button>
+              </td>
+            </tr>`;
+                }).join('');
+
+                // 狀態快速改
+                tbody.querySelectorAll('.status-select').forEach(sel => {
+                    sel.addEventListener('change', async () => {
+                        await updateStatus(sel.dataset.id, sel.value, currentUser.id);
+                        renderTable();
+                    });
+                });
+
+                // 編輯
+                tbody.querySelectorAll('.btn-edit').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const t = allTasks.find(x => x.id === btn.dataset.id);
+                        if (t) openTaskModal(t, currentUser, renderTable);
+                    });
+                });
+
+                // 刪除
+                tbody.querySelectorAll('.btn-del').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        confirmDialog('確定要刪除這項任務嗎？', async () => {
+                            await deleteTask(btn.dataset.id);
+                            renderTable();
+                        });
+                    });
+                });
+
+            } catch (e) {
+                showToast('載入失敗：' + e.message, 'error');
+            }
+        }
+
+        function renderCatChips() {
+            const container = document.getElementById('cat-filter-bar');
+            if (!container) return;
+            container.innerHTML = `<button class="filter-chip active" data-cat="">全部</button>` +
+                CATEGORIES.map(c =>
+                    `<button class="filter-chip" data-cat="${escHtml(c.id)}">${c.icon} ${escHtml(c.label)}</button>`
+                ).join('');
+            container.querySelectorAll('.filter-chip').forEach(chip => {
+                chip.addEventListener('click', () => {
+                    container.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+                    chip.classList.add('active');
+                    filters.cat = chip.dataset.cat;
+                    renderTable();
+                });
+            });
+        }
+
+        function bindFilters() {
+            document.getElementById('filter-year').addEventListener('change', e => { filters.year = e.target.value; renderTable(); });
+            document.getElementById('filter-month').addEventListener('change', e => { filters.month = e.target.value; renderTable(); });
+
+            document.querySelectorAll('.filter-chip-status').forEach(chip => {
+                chip.addEventListener('click', () => {
+                    document.querySelectorAll('.filter-chip-status').forEach(c => c.classList.remove('active'));
+                    chip.classList.add('active');
+                    filters.status = chip.dataset.status;
+                    renderTable();
+                });
+            });
+
+            document.getElementById('search-input').addEventListener('input', debounce(e => {
+                filters.search = e.target.value;
+                renderTable();
+            }, 400));
+
+            document.getElementById('btn-add-task').addEventListener('click', () => {
+                openTaskModal({
+                    year: parseInt(filters.year) || 2026,
+                    month: parseInt(filters.month) || new Date().getMonth() + 1,
+                }, currentUser, renderTable);
+            });
+
+            document.getElementById('btn-manage-cat')?.addEventListener('click', () => {
+                openCategoryModal(currentUser, () => {
+                    renderCatChips();
+                    renderTable();
+                });
+            });
+        }
+    </script>
+</body>
+
+</html>

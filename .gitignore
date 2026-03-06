@@ -1,0 +1,17 @@
+# .gitignore for HR Calendar System
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# Dev tools
+start.bat
+*.log
+node_modules/
+
+# Editor
+.vscode/
+.idea/
+
+# System
+.DS_Store

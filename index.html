@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>月曆 — HR 行事曆系統</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="stylesheet" href="css/main.css" />
+    <link rel="stylesheet" href="css/calendar.css" />
+</head>
+
+<body>
+    <div class="app-shell">
+        <!-- ── Sidebar ── -->
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <div class="logo-icon">📅</div>
+                <div>
+                    <div class="logo-text">HR 行事曆</div>
+                    <div class="logo-sub">人力資源處 2026</div>
+                </div>
+            </div>
+            <nav class="sidebar-nav">
+                <div class="nav-section-label">主選單</div>
+                <a href="index.html" class="nav-item active"><span class="nav-icon">📅</span> 月曆</a>
+                <a href="dashboard.html" class="nav-item"><span class="nav-icon">📊</span> 儀表板</a>
+                <a href="tasks.html" class="nav-item"><span class="nav-icon">📋</span> 任務列表</a>
+
+                <div class="nav-section-label" style="margin-top:12px">業務類別</div>
+                <div class="nav-item" id="filter-cat-all" style="cursor:pointer">
+                    <span class="nav-dot" style="background:#94a3b8"></span> 全部
+                </div>
+                <div id="cat-nav-items"><!-- JS 動態填入 --></div>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="user-card">
+                    <div class="user-avatar" id="user-avatar">HR</div>
+                    <div>
+                        <div class="user-name" id="user-name">載入中...</div>
+                        <div class="user-email" id="user-email"></div>
+                    </div>
+                </div>
+                <button class="btn btn-ghost btn-sm" id="btn-logout" style="width:100%;margin-top:4px">登出</button>
+            </div>
+        </aside>
+
+        <!-- ── Header ── -->
+        <header class="main-header">
+            <div class="calendar-nav" style="flex:1">
+                <div class="calendar-nav-center">
+                    <button id="btn-prev-month" class="btn btn-secondary btn-icon">‹</button>
+                    <div id="month-label" class="month-label">載入中...</div>
+                    <button id="btn-next-month" class="btn btn-secondary btn-icon">›</button>
+                    <button id="btn-today" class="btn btn-ghost btn-sm">今日</button>
+                </div>
+                <div class="legend">
+                    <div id="cal-legend">
+                        <!-- JS 動態填入 -->
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button id="btn-add-task" class="btn btn-primary">＋ 新增任務</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- ── Calendar ── -->
+        <main class="main-content" style="padding-top:12px">
+            <div class="card" style="overflow:hidden">
+                <div class="calendar-weekdays" style="padding:10px 8px 0">
+                    <div class="weekday-label">日</div>
+                    <div class="weekday-label">一</div>
+                    <div class="weekday-label">二</div>
+                    <div class="weekday-label">三</div>
+                    <div class="weekday-label">四</div>
+                    <div class="weekday-label">五</div>
+                    <div class="weekday-label">六</div>
+                </div>
+                <div id="cal-grid" class="calendar-grid" style="padding:8px;gap:3px">
+                    <div style="grid-column:1/-1;text-align:center;padding:60px">
+                        <div class="spinner" style="margin:0 auto"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ── 側欄 ── -->
+    <div id="day-tasks-panel" class="day-tasks-panel">
+        <div class="panel-header">
+            <div>
+                <div class="panel-title" id="panel-title">任務</div>
+                <div class="panel-date" id="panel-date"></div>
+            </div>
+            <button class="modal-close" id="btn-close-panel">✕</button>
+        </div>
+        <div class="panel-body" id="panel-body"></div>
+        <div class="panel-footer">
+            <button class="btn btn-primary" id="panel-add-btn" style="width:100%">＋ 在此日新增任務</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <script src="js/hr-app.js"></script>
+    <script>
+        // ── 月曆狀態 ──
+        const now = new Date();
+        let curYear = now.getFullYear();
+        let curMonth = now.getMonth() + 1;
+        let curCat = '';
+        let currentUser = null;
+        const MONTH_NAMES = ['', '1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+
+        function hexToRgb(hex) {
+            const h = hex.replace('#', '');
+            return `${parseInt(h.slice(0, 2), 16)},${parseInt(h.slice(2, 4), 16)},${parseInt(h.slice(4, 6), 16)}`;
+        }
+
+        (async () => {
+            initSB();
+            currentUser = await requireAuth();
+            if (!currentUser) return;
+            renderUserInfo(currentUser);
+            await loadCategories();
+            renderCatNav();
+            await renderCalendar();
+            bindNav();
+
+            // Realtime
+            window.__sb.channel('hr_tasks_channel')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'hr_tasks' }, () => renderCalendar())
+                .subscribe();
+        })();
+
+        function renderCatNav() {
+            const nav = document.getElementById('cat-nav-items');
+            if (!nav) return;
+            nav.innerHTML = CATEGORIES.map(c =>
+                `<div class="nav-item" data-filter-cat="${escHtml(c.id)}" style="cursor:pointer">
+            <span class="nav-dot" style="background:${escHtml(c.color)}"></span> ${escHtml(c.label)}
+          </div>`
+            ).join('');
+            nav.querySelectorAll('[data-filter-cat]').forEach(el => {
+                el.addEventListener('click', () => { curCat = el.dataset.filterCat; renderCalendar(); });
+            });
+
+            const legend = document.getElementById('cal-legend');
+            if (legend) {
+                legend.innerHTML = CATEGORIES.map(c =>
+                    `<div class="legend-item"><div class="legend-dot" style="background:${escHtml(c.color)}"></div>${escHtml(c.label)}</div>`
+                ).join('');
+            }
+        }
+
+        async function renderCalendar() {
+            document.getElementById('month-label').textContent = `${curYear} 年 ${MONTH_NAMES[curMonth]}`;
+            const grid = document.getElementById('cal-grid');
+            grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px"><div class="spinner" style="margin:0 auto"></div></div>`;
+
+            // pad 需最先定義，taskMap loop 也會用到
+            const pad = n => String(n).padStart(2, '0');
+            const firstDow = new Date(curYear, curMonth - 1, 1).getDay();
+            const lastDay = new Date(curYear, curMonth, 0).getDate();
+            const cells = Math.ceil((firstDow + lastDay) / 7) * 7;
+            const todayLocal = `${new Date().getFullYear()}-${pad(new Date().getMonth() + 1)}-${pad(new Date().getDate())}`;
+            // 當月第一天/最後一天（限制跨月 loop 範圍）
+            const viewFirst = `${curYear}-${pad(curMonth)}-01`;
+            const viewLast = `${curYear}-${pad(curMonth)}-${pad(lastDay)}`;
+
+            let tasks;
+            try {
+                tasks = await fetchCalendarTasks(curYear, curMonth, curCat || undefined);
+            } catch (e) {
+                showToast('載入失敗：' + e.message, 'error');
+                grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--status-overdue)">載入失敗，請重試</div>`;
+                return;
+            }
+
+            // group by date（多日任務展開到所有跨越日期，限制在當月視窗內）
+            const taskMap = {};
+            for (const t of tasks) {
+                const startStr = t.event_date?.slice(0, 10);
+                const endStr = t.deadline?.slice(0, 10);
+
+                if (startStr && endStr && endStr > startStr) {
+                    // 限制展開範圍在當月視窗內，避免無限迴圈
+                    const loopFrom = startStr < viewFirst ? viewFirst : startStr;
+                    const loopTo = endStr > viewLast ? viewLast : endStr;
+                    const loopDate = new Date(loopFrom + 'T00:00:00');
+                    const endDate = new Date(loopTo + 'T00:00:00');
+                    while (loopDate <= endDate) {
+                        const key = `${loopDate.getFullYear()}-${pad(loopDate.getMonth() + 1)}-${pad(loopDate.getDate())}`;
+                        const isStart = key === startStr;
+                        const isEnd = key === endStr;
+                        const spanType = isStart ? 'start' : isEnd ? 'end' : 'mid';
+                        (taskMap[key] = taskMap[key] ?? []).push({ ...t, _span: spanType });
+                        loopDate.setDate(loopDate.getDate() + 1);
+                    }
+                } else {
+                    const key = startStr ?? `${t.year}-${pad(t.month)}-01`;
+                    (taskMap[key] = taskMap[key] ?? []).push({ ...t, _span: 'single' });
+                }
+            }
+
+            let html = '';
+            for (let i = 0; i < cells; i++) {
+                const offset = i - firstDow;
+                const d = new Date(curYear, curMonth - 1, 1 + offset);
+                const ds = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+                const isCur = d.getMonth() === curMonth - 1;
+                const isToday = ds === todayLocal;
+                const dayTasks = taskMap[ds] ?? [];
+
+                html += `<div class="cal-day${isCur ? '' : ' other-month'}${isToday ? ' today' : ''}" data-date="${ds}">`;
+                html += `<div class="day-num" data-date="${ds}">${d.getDate()}</div>`;
+
+                dayTasks.slice(0, 3).forEach(t => {
+                    const eff = isOverdue(t) ? 'overdue' : t.status;
+                    const catClr = CATEGORIES.find(c => c.id === t.category)?.color ?? '#94a3b8';
+                    const span = t._span ?? 'single';
+                    const spanCls = span === 'single' ? '' : `span-${span}`;
+
+                    // 中間/結尾日：顯示延伸色條，不顯示文字和圓點
+                    if (span === 'mid') {
+                        html += `<button class="cal-task span-mid"
+                          style="background:rgba(${hexToRgb(catClr)},.18);color:${escHtml(catClr)}"
+                          data-task-id="${t.id}" title="${escHtml(t.title)}">
+                          <span style="overflow:hidden;text-overflow:ellipsis">${escHtml(t.title)}</span>
+                        </button>`;
+                        return;
+                    }
+                    if (span === 'end') {
+                        html += `<button class="cal-task span-end${eff === 'done' ? ' done' : ''}${eff === 'overdue' ? ' overdue' : ''}"
+                          style="background:rgba(${hexToRgb(catClr)},.18);color:${escHtml(catClr)};border-right:3px solid ${escHtml(catClr)}"
+                          data-task-id="${t.id}" title="${escHtml(t.title)}">
+                          <span style="overflow:hidden;text-overflow:ellipsis">${escHtml(t.title)} ◀</span>
+                        </button>`;
+                        return;
+                    }
+
+                    // start 或 single：完整顯示
+                    html += `<button class="cal-task ${spanCls}${eff === 'done' ? ' done' : ''}${eff === 'overdue' ? ' overdue' : ''}"
+              style="background:rgba(${hexToRgb(catClr)},.18);color:${escHtml(catClr)};border-left:3px solid ${escHtml(catClr)}"
+              data-task-id="${t.id}" title="${escHtml(t.title)}">
+              <span class="task-dot ${eff}"></span>
+              <span style="overflow:hidden;text-overflow:ellipsis">${escHtml(t.title)}</span>
+            </button>`;
+                });
+
+                if (dayTasks.length > 3) {
+                    html += `<div class="cal-more" data-date="${ds}">+${dayTasks.length - 3} 項</div>`;
+                }
+                html += '</div>';
+            }
+
+            grid.innerHTML = html;
+
+            // 點空白格子或日期數字 → 直接新增任務（預填具體日期）
+            grid.querySelectorAll('.cal-day[data-date]').forEach(day => {
+                day.addEventListener('click', () => {
+                    const ds = day.dataset.date;
+                    const [y, m] = ds.split('-').map(Number);
+                    openTaskModal({
+                        event_date: ds,
+                        year: y,
+                        month: m,
+                    }, currentUser, renderCalendar);
+                });
+            });
+
+            // 點任務 chip → 編輯（阻止冒泡至格子）
+            grid.querySelectorAll('.cal-task').forEach(btn => {
+                btn.addEventListener('click', e => {
+                    e.stopPropagation();
+                    const t = tasks.find(x => x.id === btn.dataset.taskId);
+                    if (t) openTaskModal(t, currentUser, renderCalendar);
+                });
+            });
+
+            // 點 +X項 → 開側欄（阻止冒泡）
+            grid.querySelectorAll('.cal-more').forEach(el => {
+                el.addEventListener('click', e => {
+                    e.stopPropagation();
+                    const ds = el.dataset.date;
+                    openDayPanel(ds, taskMap[ds] ?? [], tasks);
+                });
+            });
+        }
+
+        function openDayPanel(dateStr, dayTasks, allTasks) {
+            const panel = document.getElementById('day-tasks-panel');
+            document.getElementById('panel-title').textContent = `${dayTasks.length} 項任務`;
+            document.getElementById('panel-date').textContent = formatDate(dateStr);
+
+            const body = document.getElementById('panel-body');
+            if (!dayTasks.length) {
+                body.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><p>這天沒有任務</p></div>`;
+            } else {
+                body.innerHTML = dayTasks.map(t => {
+                    const eff = isOverdue(t) ? 'overdue' : t.status;
+                    const sl = { pending: '待辦', in_progress: '進行中', done: '已完成', overdue: '已逾期' };
+                    return `<div class="panel-task-card" data-id="${t.id}" style="background:var(--surface-hover);border-radius:var(--radius);padding:12px;cursor:pointer;border:1px solid var(--border);margin-bottom:4px">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px">
+                <div style="font-size:13px;font-weight:600">${escHtml(t.title)}</div>
+                <span class="badge badge-${eff}" style="flex-shrink:0">${sl[eff] ?? eff}</span>
+              </div>
+              <div style="display:flex;gap:6px;align-items:center">
+                <span class="cat-badge" style="${getCatStyle(t.category)}">
+                  ${escHtml(CATEGORIES.find(c => c.id === t.category)?.icon || '')} ${escHtml(t.category)}
+                </span>
+                ${t.deadline ? `<span style="font-size:11px;color:var(--text-muted)">截止 ${formatDate(t.deadline)}</span>` : ''}
+              </div>
+            </div>`;
+                }).join('');
+                body.querySelectorAll('.panel-task-card').forEach(card => {
+                    card.addEventListener('click', () => {
+                        const t = allTasks.find(x => x.id === card.dataset.id);
+                        if (t) openTaskModal(t, currentUser, renderCalendar);
+                    });
+                });
+            }
+
+            document.getElementById('panel-add-btn').onclick = () => {
+                openTaskModal({ event_date: dateStr, year: curYear, month: curMonth }, currentUser, () => {
+                    renderCalendar();
+                    panel.classList.remove('open');
+                });
+            };
+
+            panel.classList.add('open');
+        }
+
+        function bindNav() {
+            document.getElementById('btn-prev-month').addEventListener('click', () => {
+                if (curMonth === 1) { curMonth = 12; curYear--; } else curMonth--;
+                renderCalendar();
+            });
+            document.getElementById('btn-next-month').addEventListener('click', () => {
+                if (curMonth === 12) { curMonth = 1; curYear++; } else curMonth++;
+                renderCalendar();
+            });
+            document.getElementById('btn-today').addEventListener('click', () => {
+                const n = new Date();
+                curYear = n.getFullYear(); curMonth = n.getMonth() + 1;
+                renderCalendar();
+            });
+            document.getElementById('btn-close-panel').addEventListener('click', () => {
+                document.getElementById('day-tasks-panel').classList.remove('open');
+            });
+            document.getElementById('btn-add-task').addEventListener('click', () => {
+                openTaskModal({ year: curYear, month: curMonth }, currentUser, renderCalendar);
+            });
+
+            // 側邊類別篩選
+            document.querySelectorAll('[data-filter-cat]').forEach(el => {
+                el.addEventListener('click', () => {
+                    curCat = el.dataset.filterCat;
+                    renderCalendar();
+                });
+            });
+            document.getElementById('filter-cat-all')?.addEventListener('click', () => {
+                curCat = '';
+                renderCalendar();
+            });
+        }
+    </script>
+</body>
+
+</html>
