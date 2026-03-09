@@ -220,26 +220,19 @@
                 html += `<div class="cal-day${isCur ? '' : ' other-month'}${isToday ? ' today' : ''}" data-date="${ds}">`;
                 html += `<div class="day-num" data-date="${ds}">${d.getDate()}</div>`;
 
-                dayTasks.slice(0, 3).forEach(t => {
+                const gridTasks = dayTasks.filter(t => t._span !== 'mid');
+                gridTasks.slice(0, 3).forEach(t => {
                     const eff = isOverdue(t) ? 'overdue' : t.status;
                     const catClr = CATEGORIES.find(c => c.id === t.category)?.color ?? '#94a3b8';
                     const span = t._span ?? 'single';
                     const spanCls = span === 'single' ? '' : `span-${span}`;
 
-                    // 中間/結尾日：顯示延伸色條，不顯示文字和圓點
-                    if (span === 'mid') {
-                        html += `<button class="cal-task span-mid"
-                          style="background:rgba(${hexToRgb(catClr)},.18);color:${escHtml(catClr)}"
-                          data-task-id="${t.id}" title="${escHtml(t.title)}">
-                          <span style="overflow:hidden;text-overflow:ellipsis">${escHtml(t.title)}</span>
-                        </button>`;
-                        return;
-                    }
                     if (span === 'end') {
                         html += `<button class="cal-task span-end${eff === 'done' ? ' done' : ''}${eff === 'overdue' ? ' overdue' : ''}"
                           style="background:rgba(${hexToRgb(catClr)},.18);color:${escHtml(catClr)};border-right:3px solid ${escHtml(catClr)}"
                           data-task-id="${t.id}" title="${escHtml(t.title)}">
-                          <span style="overflow:hidden;text-overflow:ellipsis">${escHtml(t.title)} ◀</span>
+                          <b style="font-weight:bold;margin-right:2px;flex-shrink:0;">←</b>
+                          <span style="overflow:hidden;text-overflow:ellipsis">${escHtml(t.title)}</span>
                         </button>`;
                         return;
                     }
@@ -251,13 +244,16 @@
                     html += `<button class="cal-task ${spanCls}${eff === 'done' ? ' done' : ''}${eff === 'overdue' ? ' overdue' : ''}"
               style="background:rgba(${hexToRgb(catClr)},.18);color:${escHtml(catClr)};border-left:3px solid ${escHtml(catClr)}"
               data-task-id="${t.id}" title="${escHtml(t.title)}">
-              <span class="task-icon">${icon}</span>
+              <span class="task-icon" style="flex-shrink:0">${icon}</span>
               <span style="overflow:hidden;text-overflow:ellipsis">${escHtml(t.title)}</span>
+              ${span === 'start' ? '<b style="font-weight:bold;margin-left:2px;flex-shrink:0;">➔</b>' : ''}
             </button>`;
                 });
 
-                if (dayTasks.length > 3) {
-                    html += `<div class="cal-more" data-date="${ds}">+${dayTasks.length - 3} 項</div>`;
+                // 若網格顯示超過3個則顯示 +X，讓 user 知道這個格子點開還有更多 (不含中段任務)
+                const hiddenCount = dayTasks.length - gridTasks.slice(0, 3).length;
+                if (hiddenCount > 0) {
+                    html += `<div class="cal-more" data-date="${ds}">+${hiddenCount} 項</div>`;
                 }
                 html += '</div>';
             }
