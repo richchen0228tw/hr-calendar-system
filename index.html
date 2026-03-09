@@ -244,11 +244,14 @@
                         return;
                     }
 
+                    const statusIcons = { pending: '⏳', in_progress: '🔄', done: '✅', overdue: '🔴' };
+                    const icon = statusIcons[eff] || '⏳';
+
                     // start 或 single：完整顯示
                     html += `<button class="cal-task ${spanCls}${eff === 'done' ? ' done' : ''}${eff === 'overdue' ? ' overdue' : ''}"
               style="background:rgba(${hexToRgb(catClr)},.18);color:${escHtml(catClr)};border-left:3px solid ${escHtml(catClr)}"
               data-task-id="${t.id}" title="${escHtml(t.title)}">
-              <span class="task-dot ${eff}"></span>
+              <span class="task-icon">${icon}</span>
               <span style="overflow:hidden;text-overflow:ellipsis">${escHtml(t.title)}</span>
             </button>`;
                 });
@@ -304,7 +307,7 @@
             } else {
                 body.innerHTML = dayTasks.map(t => {
                     const eff = isOverdue(t) ? 'overdue' : t.status;
-                    const sl = { pending: '待辦', in_progress: '進行中', done: '已完成', overdue: '已逾期' };
+                    const sl = { pending: '⏳ 待辦', in_progress: '🔄 進行中', done: '✅ 已完成', overdue: '🔴 逾期' };
                     return `<div class="panel-task-card" data-id="${t.id}" style="background:var(--surface-hover);border-radius:var(--radius);padding:12px;cursor:pointer;border:1px solid var(--border);margin-bottom:4px">
               <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px">
                 <div style="font-size:13px;font-weight:600">${escHtml(t.title)}</div>

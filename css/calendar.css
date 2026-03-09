@@ -120,7 +120,7 @@
     overflow: hidden;
 }
 
-.cal-task span:not(.task-dot) {
+.cal-task span:not(.task-icon) {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
