@@ -113,12 +113,14 @@
     cursor: pointer;
     transition: filter var(--transition);
     border: none;
+    border-left: 4px solid transparent;
+    /* default transparent border, will be overridden by status class */
     text-align: left;
     width: 100%;
     overflow: hidden;
 }
 
-.cal-task span {
+.cal-task span:not(.task-dot) {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -156,13 +158,14 @@
     color: #065f46;
 }
 
-.cal-task.done {
+.cal-task.status-done {
     opacity: .55;
     text-decoration: line-through;
 }
 
-.cal-task.overdue {
-    outline: 1px solid var(--status-overdue);
+.cal-task.status-done {
+    opacity: .55;
+    text-decoration: line-through;
 }
 
 /* ── 多日跨欄任務 ── */
@@ -193,36 +196,29 @@
     z-index: 0;
 }
 
-/* 跨欄任務不顯示狀態點（中間/結尾日） */
-.cal-task.span-mid .task-dot,
-.cal-task.span-end .task-dot {
-    display: none;
+/* 跨欄任務：中間/結尾日取消左側狀態邊框 */
+.cal-task.span-mid,
+.cal-task.span-end {
+    border-left: none !important;
+    padding-left: 6px;
+    /* 補償邊框消失以維持文字對齊 */
 }
 
-/* 狀態圓點 */
-.task-dot {
-    width: 6px;
-    height: 6px;
-    min-width: 6px;
-    min-height: 6px;
-    border-radius: 50%;
-    flex-shrink: 0;
+/* 狀態邊框 */
+.cal-task.status-pending {
+    border-left-color: var(--status-pending);
 }
 
-.task-dot.pending {
-    background: var(--status-pending);
+.cal-task.status-in_progress {
+    border-left-color: var(--status-in-progress);
 }
 
-.task-dot.in_progress {
-    background: var(--status-in-progress);
+.cal-task.status-done {
+    border-left-color: var(--status-done);
 }
 
-.task-dot.done {
-    background: var(--status-done);
-}
-
-.task-dot.overdue {
-    background: var(--status-overdue);
+.cal-task.status-overdue {
+    border-left-color: var(--status-overdue);
 }
 
 /* +N 更多 */

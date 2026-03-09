@@ -108,10 +108,9 @@ function buildGrid() {
 function buildTaskChip(task) {
     const effectiveStatus = isOverdue(task) ? 'overdue' : task.status;
     const chip = document.createElement('button');
-    chip.className = `cal-task cat-${task.category} ${effectiveStatus === 'done' ? 'done' : ''} ${effectiveStatus === 'overdue' ? 'overdue' : ''}`;
+    chip.className = `cal-task cat-${task.category} status-${effectiveStatus}`;
     chip.title = task.title;
     chip.innerHTML = `
-    <span class="task-dot ${effectiveStatus}"></span>
     <span class="task-chip-label">${task.title}</span>
   `;
     chip.addEventListener('click', e => {
