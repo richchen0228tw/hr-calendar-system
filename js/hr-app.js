@@ -666,7 +666,8 @@ function openTaskModal(task = {}, user, onSaved) {
         <select id="f-assignee" class="form-control">${buildAssigneeOptions()}</select>
       </div>
       <div class="form-group">
-        <textarea id="f-notes" class="form-control" rows="3">${escHtml(task.notes ?? '')}</textarea>
+        <label class="form-label">備註說明</label>
+        <textarea id="f-notes" class="form-control" rows="3" placeholder="可在此備註說明任務細節，如授課講師、遇到的問題事項...等">${escHtml(task.notes ?? '')}</textarea>
       </div>
       <div class="form-group" style="display:flex;align-items:center;gap:8px">
         <input id="f-recurring" type="checkbox" ${task.is_recurring ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer">
